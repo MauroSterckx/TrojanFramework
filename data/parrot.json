@@ -1,1 +1,1 @@
-{"network_scan": {"status": "success", "active_hosts": []}}
+{"network_scan": {"status": "error", "message": "[Errno 1] Operation not permitted"}}
