@@ -25,13 +25,13 @@ def run():
         print(f"Gevonden actieve hosts: {active_hosts}")
 
         # Sla resultaten op in een tekstbestand
-        results_path = f"data/{hostname}/nmap_results.txt"
-        os.makedirs(os.path.dirname(results_path), exist_ok=True)
-        with open(results_path, "w") as results_file:
-            for host in active_hosts:
-                results_file.write(f"{host}\n")
+        # results_path = f"data/{hostname}/nmap_results.txt"
+        # os.makedirs(os.path.dirname(results_path), exist_ok=True)
+        # with open(results_path, "w") as results_file:
+        #     for host in active_hosts:
+        #         results_file.write(f"{host}\n")
 
-        print(f"Resultaten opgeslagen in: {results_path}")
+        # print(f"Resultaten opgeslagen in: {results_path}")
 
         # Retourneer de resultaten voor upload
         return {"status": "success", "active_hosts": active_hosts}
