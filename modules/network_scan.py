@@ -1,41 +1,48 @@
-import os
 import socket
-import json
+import os
+import ipaddress
+from scapy.all import ARP, Ether, srp
+
+def get_local_ip():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+        return local_ip
+    except Exception as e:
+        print(f"Fout bij ophalen van lokaal IP: {e}")
+        return "127.0.0.1"
+
+def scan_network(subnet):
+    arp = ARP(pdst=subnet)
+    ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+    packet = ether / arp
+    result = srp(packet, timeout=2, verbose=False)[0]
+    active_hosts = []
+    for _, received in result:
+        active_hosts.append(received.psrc)
+    return active_hosts
+
+def save_results_to_file(hostname, results):
+    directory = f"./data/{hostname}"
+    os.makedirs(directory, exist_ok=True)
+    file_path = os.path.join(directory, "nmap_results.txt")
+    with open(file_path, "w") as f:
+        for ip in results:
+            f.write(f"{ip}\n")
 
 def run():
+    hostname = socket.gethostname()
+    local_ip = get_local_ip()
     try:
-        # Bepaal lokaal subnet
-        hostname = socket.gethostname()
-        local_ip = socket.gethostbyname(hostname)
-        subnet = ".".join(local_ip.split('.')[:3])  # Neem de eerste 3 octetten, bijvoorbeeld: 192.168.1
-
-        print(f"Netwerkverkenning gestart voor subnet: {subnet}.x")
-
-        # Vind actieve hosts
-        active_hosts = []
-        for i in range(1, 255):  # Doorloop alle mogelijke hosts in het subnet
-            target_ip = f"{subnet}.{i}"
-            try:
-                # Probeer verbinding te maken om te zien of de host actief is
-                socket.create_connection((target_ip, 80), timeout=0.5)
-                active_hosts.append(target_ip)
-            except (socket.timeout, OSError):
-                pass  # Als de host niet reageert, negeer dan de fout
-
-        print(f"Gevonden actieve hosts: {active_hosts}")
-
-        # Sla resultaten op in een tekstbestand
-        # results_path = f"data/{hostname}/nmap_results.txt"
-        # os.makedirs(os.path.dirname(results_path), exist_ok=True)
-        # with open(results_path, "w") as results_file:
-        #     for host in active_hosts:
-        #         results_file.write(f"{host}\n")
-
-        # print(f"Resultaten opgeslagen in: {results_path}")
-
-        # Retourneer de resultaten voor upload
+        # Bereken het subnet door het IP-adres af te ronden naar het netwerk (CIDR /24)
+        network = ipaddress.ip_network(local_ip + "/24", strict=False)
+        subnet = str(network)
+        print(f"Scannen van subnet: {subnet}")
+        
+        active_hosts = scan_network(subnet)
+        # save_results_to_file(hostname, active_hosts)
         return {"status": "success", "active_hosts": active_hosts}
-
     except Exception as e:
-        print(f"Fout tijdens netwerkverkenning: {e}")
-        return {"status": "error", "error_message": str(e)}
+        print(f"Fout bij uitvoeren van netwerk-scan: {e}")
+        return {"status": "error", "message": str(e)}
