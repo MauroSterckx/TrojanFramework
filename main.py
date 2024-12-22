@@ -113,6 +113,7 @@ def execute_module(module_path):
 #         print(f"Fout bij uploaden van resultaten: {e}")
         
         
+
 def send_results(data):
     # Pad naar het resultaatbestand
     file_path = f"data/{CLIENT_ID}.json"
@@ -123,14 +124,16 @@ def send_results(data):
         with open(file_path, 'r') as file:
             try:
                 existing_data = json.load(file)
+                if not isinstance(existing_data, list):  # Als de inhoud geen lijst is, maak een lege lijst
+                    existing_data = []
             except json.JSONDecodeError:
-                existing_data = []  # Maak een lege lijst als het bestand niet goed te lezen is
+                # Als het bestand niet goed gelezen kan worden, maak een lege lijst
+                existing_data = []
     else:
         # Als het bestand nog niet bestaat, maak een nieuwe lijst
         existing_data = []
     
     # Voeg de nieuwe resultaten toe aan de bestaande data
-    # Zorg ervoor dat data altijd een lijst is
     if isinstance(data, dict):
         existing_data.append(data)
     else:
@@ -141,7 +144,6 @@ def send_results(data):
         json.dump(existing_data, file, indent=4)
 
     print("Resultaten succesvol geüpload.")
-
 
 def main():
     # Hoofdfunctie van het Trojan-framework
