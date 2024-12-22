@@ -119,23 +119,32 @@ def send_results(data):
     # Pad naar het bestand op GitHub
     file_path = f"data/{CLIENT_ID}.json"
     url = f"{GITHUB_REPO}/contents/{file_path}"
-    
+
     # Haal de huidige inhoud op van het bestand, indien het al bestaat
     try:
         response = requests.get(url, headers=HEADERS)
         if response.status_code == 200:
             # Het bestand bestaat al, krijg de sha voor update
             sha = response.json()["sha"]
+            existing_content = response.json().get("content", "")
+            # Decodeer de bestaande inhoud (base64)
+            decoded_content = base64.b64decode(existing_content).decode("utf-8")
+            existing_data = json.loads(decoded_content)
         else:
-            # Het bestand bestaat nog niet, geen sha nodig
+            # Het bestand bestaat nog niet, geen sha nodig, start met lege lijst
             sha = None
+            existing_data = []
     except requests.exceptions.RequestException as e:
         print(f"Fout bij ophalen van bestaande data: {e}")
         sha = None  # Indien er een fout is, proberen we het bestand als nieuw te behandelen
-    
-    # Data voorbereiden (base64 encoding)
+        existing_data = []
+
+    # Voeg de nieuwe data toe aan de bestaande data
+    existing_data.append(data)
+
+    # Data voorbereiden voor upload
     try:
-        content = json.dumps(data)  # Zet de data om naar een JSON-string
+        content = json.dumps(existing_data)  # Zet de gecombineerde data om naar een JSON-string
         encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")  # Base64 encoderen
 
         # Payload voorbereiden voor GitHub API
