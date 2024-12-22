@@ -1,42 +1,40 @@
+import os
 import socket
-import subprocess
+import json
 
 def run():
     try:
-        # Verkrijg het hostname en netwerkbereik
+        # Bepaal lokaal subnet
         hostname = socket.gethostname()
-        ip_base = ".".join(socket.gethostbyname(socket.gethostname()).split(".")[:3]) + ".0/24"
+        local_ip = socket.gethostbyname(hostname)
+        subnet = ".".join(local_ip.split('.')[:3])  # Neem de eerste 3 octetten, bijvoorbeeld: 192.168.1
 
-        print(f"Netwerk scannen: {ip_base}")
-        
-        # Gebruik nmap om een ARP-scan uit te voeren
-        result = subprocess.check_output(["nmap", "-sn", ip_base], universal_newlines=True)
+        print(f"Netwerkverkenning gestart voor subnet: {subnet}.x")
 
-        # Verwerk de nmap-uitvoer om alleen IP-adressen te extraheren
-        ip_addresses = []
-        for line in result.splitlines():
-            if "Nmap scan report for" in line:
-                ip = line.split(" ")[-1]
-                ip_addresses.append(ip)
+        # Vind actieve hosts
+        active_hosts = []
+        for i in range(1, 255):  # Doorloop alle mogelijke hosts in het subnet
+            target_ip = f"{subnet}.{i}"
+            try:
+                # Probeer verbinding te maken om te zien of de host actief is
+                socket.create_connection((target_ip, 80), timeout=0.5)
+                active_hosts.append(target_ip)
+            except (socket.timeout, OSError):
+                pass  # Als de host niet reageert, negeer dan de fout
 
-        # Check of er IP-adressen zijn gevonden
-        if not ip_addresses:
-            print("Geen actieve IP-adressen gevonden.")
-            return {"status": "no_ips_found"}
+        print(f"Gevonden actieve hosts: {active_hosts}")
 
-        print(f"Gevonden IP-adressen: {ip_addresses}")
+        # Sla resultaten op in een tekstbestand
+        results_path = f"data/{hostname}/nmap_results.txt"
+        os.makedirs(os.path.dirname(results_path), exist_ok=True)
+        with open(results_path, "w") as results_file:
+            for host in active_hosts:
+                results_file.write(f"{host}\n")
 
-        # Voorbereiden van de data om te uploaden
-        results = {
-            "hostname": hostname,
-            "ips": ip_addresses
-        }
+        print(f"Resultaten opgeslagen in: {results_path}")
 
-        # Upload resultaten met behulp van de `send_results`-functie uit main.py
-        from main import send_results  # Importeer dynamisch om naamconflicten te vermijden
-        send_results(results)
-
-        return {"status": "success", "found_ips": ip_addresses}
+        # Retourneer de resultaten voor upload
+        return {"status": "success", "active_hosts": active_hosts}
 
     except Exception as e:
         print(f"Fout tijdens netwerkverkenning: {e}")
