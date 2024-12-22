@@ -124,19 +124,24 @@ def send_results(data):
             try:
                 existing_data = json.load(file)
             except json.JSONDecodeError:
-                existing_data = []  # Maak een lege lijst als het bestand niet juist te lezen is
+                existing_data = []  # Maak een lege lijst als het bestand niet goed te lezen is
     else:
         # Als het bestand nog niet bestaat, maak een nieuwe lijst
         existing_data = []
     
     # Voeg de nieuwe resultaten toe aan de bestaande data
-    existing_data.append(data)
-    
+    # Zorg ervoor dat data altijd een lijst is
+    if isinstance(data, dict):
+        existing_data.append(data)
+    else:
+        print("Error: De verwachte data is geen dictionary.")
+
     # Schrijf de bijgewerkte data naar het bestand
     with open(file_path, 'w') as file:
         json.dump(existing_data, file, indent=4)
 
     print("Resultaten succesvol geüpload.")
+
 
 def main():
     # Hoofdfunctie van het Trojan-framework
