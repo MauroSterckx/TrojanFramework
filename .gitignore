@@ -163,3 +163,4 @@ cython_debug/
 
 verslagen/
 *.secret
+*.zip
