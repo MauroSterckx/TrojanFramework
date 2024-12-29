@@ -1,6 +1,6 @@
 {
     "modules": [
-      "reverse_shell"
+      "network_scan"
     ],
     "reverse_shell_ip": "192.168.0.50",
     "reverse_shell_port": 4444
