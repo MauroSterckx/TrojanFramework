@@ -178,8 +178,8 @@ def main():
                     send_results({module_name: results})
         
         # Wacht een willekeurige tijd om detectie te voorkomen
-        # sleep_time = random.randint(30, 120)  # 30 tot 120 seconden
-        sleep_time= 10
+        sleep_time = random.randint(30, 120)  # 30 tot 120 seconden
+        # sleep_time= 10
         time.sleep(sleep_time)
 
 if __name__ == "__main__":
